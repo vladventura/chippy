@@ -1,0 +1,2 @@
+timer_delay = 0x00
+timer_sound = 0x00
