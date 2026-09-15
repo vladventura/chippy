@@ -9,8 +9,11 @@ memory_bus.load_into_memory('./test_opcode.ch8')
 cpu.cpu_stack_pointer = 0x00
 cpu.cpu_prog_counter = 0x200
 
+ins_counter = 0
+
 while cpu.run():
-    print('Executed instruction')
+    print('Executed instruction {0}'.format(ins_counter))
+    ins_counter += 1
 
 # for x in range(gpu.screen_height):
 #     for y in range (gpu.screen_width):
