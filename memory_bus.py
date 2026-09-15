@@ -16,4 +16,5 @@ def load_into_memory(prog):
 def memory_read(addr) -> bytes:
     return memory[addr]
 
-def memory_write(addr, val): ...
+def memory_write(addr, val):
+    memory[addr] = val

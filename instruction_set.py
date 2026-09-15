@@ -1,3 +1,4 @@
+import helpers
 import gpu
 import cpu
 import memory_bus
@@ -13,12 +14,15 @@ def _00ee():
     cpu.cpu_stack[cpu.cpu_stack_pointer] = 0x000
 
 def _1nnn():
+    global instructions_param
     cpu.cpu_prog_counter = instructions_param
+    cpu.cpu_flow_flag = True
 
 def _2nnn():
     cpu.cpu_stack[cpu.cpu_stack_pointer] = cpu.cpu_prog_counter
     cpu.cpu_stack_pointer += 1
     cpu.cpu_prog_counter = instructions_param
+    cpu.cpu_flow_flag = True
 
 def _3xnn():
     vx = (instructions_param & 0xf00) >> 8
@@ -40,7 +44,9 @@ def _5xy0():
 
 def _6xnn():
     global instructions_param
-    cpu.cpu_data_registers[(instructions_param & 0xf00) >> 2] = instructions_param & 0x0ff
+    vx = (instructions_param & 0xf00) >> 8
+    nn = instructions_param & 0x0ff
+    cpu.cpu_data_registers[vx] = nn
 
 def _7xnn():
     vx = (instructions_param & 0xf00) >> 8
@@ -69,6 +75,31 @@ def _dxyn():
     n = instructions_param & 0x00f
     gpu.draw(cpu.cpu_data_registers[x], cpu.cpu_data_registers[y], n)
 
+def _fx33():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    bcd = helpers.to_bcd(cpu.cpu_data_registers[vx])
+    for offset in range(3):
+        addr = cpu.cpu_I_register + offset
+        val = (bcd >> (8 - (4 * offset))) & 0x00f
+        memory_bus.memory_write(addr, val)
+
+def _fx55():
+    global instructions_param
+    vx_max = ((instructions_param & 0xf00) >> 8) + 1
+    for vx in range(vx_max):
+        offset = cpu.cpu_I_register + vx
+        memory_bus.memory_write(offset, cpu.cpu_data_registers[vx])
+    cpu.cpu_I_register += vx_max
+
+def _fx65():
+    global instructions_param
+    vx_max = ((instructions_param & 0xf00) >> 8) + 1
+    for vx in range(vx_max):
+        offset = cpu.cpu_I_register + vx
+        cpu.cpu_data_registers[vx] = memory_bus.memory_read(offset)
+    cpu.cpu_I_register += vx_max
+
 """
 (Description, Opcode, Callback)
 """
@@ -84,7 +115,7 @@ instructions = {
     0x6000: ('Set VX to NN',                                    '6XNN', _6xnn),
     0x7000: ('Add NN to VX (no carry)',                         '7XNN', _7xnn),
     0x8000: ('Set VX = VY',                                     '8XY0', _8xy0),
-    0x8001: ('Set VX |= VY',                                    '8XY1', _8xy0),
+    0x8001: ('Set VX |= VY',                                    '8XY1', None),
     0x8002: ('Set VX &= VY',                                    '8XY2', None),
     0x8003: ('Set VX ^= VY',                                    '8XY3', None),
     0x8004: ('Set VX += VY',                                    '8XY4', None),
@@ -105,14 +136,15 @@ instructions = {
     0xF018: ('Set sound timer = VX',                            'FX18', None),
     0xF01E: ('Set I += VX',                                     'FX1E', None),
     0xF029: ('Set I to sprite on hex value in VX',              'FX29', None),
-    0xF033: ('Set BCD of VX into addresses I, I + 1, I + 2',    'FX33', None),
-    0xF055: ('Set [V0, VX] into addresses [I, I + X]',          'FX55', None),
-    0xF065: ('Set addresses [I, I + X] into [V0, VX]',          'FX65', None),
+    0xF033: ('Set BCD of VX into addresses I, I + 1, I + 2',    'FX33', _fx33),
+    0xF055: ('Set [V0, VX] into addresses [I, I + X]',          'FX55', _fx55),
+    0xF065: ('Set addresses [I, I + X] into [V0, VX]',          'FX65', _fx65),
 }
 
 def get_instruction(ins: bytes):
     global instructions_param
     opcode = int.from_bytes(ins, byteorder='big')
+    print(hex(opcode))
     instructions_param = 0x000
     if opcode & 0xf000 == 0x0000:
         if opcode == 0x00E0:

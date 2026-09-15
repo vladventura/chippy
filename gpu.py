@@ -1,4 +1,5 @@
 import cpu
+import memory_bus
 
 screen_width = 0x40
 screen_height = 0x20
@@ -9,15 +10,15 @@ def screen_clear():
         for y in range(screen_width):
             screen_matrix[x][y] = 0x00
 
-def draw(x, y, n):
+def draw(vx, vy, n):
     bit_switched = False
-    vx = cpu.cpu_data_registers[x]
-    vy = cpu.cpu_data_registers[y]
 
     for l in range(n):
         curr_i = cpu.cpu_I_register + l
+        pixel = int.from_bytes(memory_bus.memory_read(curr_i), byteorder='big')
         for w in range(8):
-            if screen_matrix[vy + l][vx + w] != curr_i: bit_switched = True
+            # if screen_matrix[vy + l][vx + w] != curr_i: bit_switched = True
+            if (pixel & (0x80 >> w)) != 0: bit_switched = True
             if (curr_i > 0):
-                screen_matrix[vx + w][vy + l] = 1
+                screen_matrix[vy + l][vx + w] ^= 1
     cpu.cpu_data_registers[0x0f] =  1 if bit_switched else 0
