@@ -20,13 +20,20 @@ cpu_data_registers = {
     0x0f: 0x00,
 }
 
+cpu_instructions_per_second = 700
+
 cpu_I_register = 0x0000
 cpu_prog_counter = 0x000
 cpu_stack = [0x000 for _ in range(0x10)]
-cpu_stack_pointer = 0
+cpu_stack_pointer = 0x00
 cpu_current_ins = None
 cpu_ins_packet = None
 cpu_flow_flag = False
+
+def initialize_cpu():
+    global cpu_prog_counter, cpu_stack_pointer
+    cpu_prog_counter = 0x200
+    cpu_stack_pointer = 0x00
 
 def fetch():
     global cpu_ins_packet, cpu_prog_counter, cpu_current_ins
@@ -41,7 +48,6 @@ def execute() -> bool:
     if cpu_current_ins == None:
         print('Not implemented yet (0x{0}): {1}'.format(cpu_ins_packet[1], cpu_ins_packet[0]))
         return False
-    print("PC ", cpu_prog_counter)
     cpu_current_ins()
     if not cpu_flow_flag:
         cpu_prog_counter += 2
@@ -49,6 +55,6 @@ def execute() -> bool:
         cpu_flow_flag = False
     return True
 
-def run() -> bool:
+def run():
     fetch()
     return execute()
