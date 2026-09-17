@@ -6,16 +6,22 @@ screen_width = 0x40
 screen_height = 0x20
 screen_matrix = [[0x00 for _ in range(screen_width)] for _ in range(screen_height)]
 screen_scale = 10
-screen_pixel_rgb = (0, 125, 250)
-screen_pixel_empty = (0, 0, 0)
+screen_pixel_rgb = ()
+screen_pixel_empty = ()
 screen = pygame.Surface
 
 def initialize_gpu():
     global screen, screen_width, screen_height, screen_scale, screen_pixel_empty
     pygame.init()
+    load_color_palette()
     screen = pygame.display.set_mode((screen_width * screen_scale, screen_height * screen_scale))
     pygame.display.set_caption("Chippy")
     screen.fill(screen_pixel_empty)
+
+def load_color_palette():
+    global screen_pixel_rgb, screen_pixel_empty
+    screen_pixel_rgb = (0, 125, 250)
+    screen_pixel_empty = (0, 0, 0)
 
 def screen_clear():
     for x in range(screen_height):
