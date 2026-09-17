@@ -20,8 +20,6 @@ cpu_data_registers = {
     0x0f: 0x00,
 }
 
-cpu_instructions_per_second = 700
-
 cpu_I_register = 0x0000
 cpu_prog_counter = 0x000
 cpu_stack = [0x000 for _ in range(0x10)]
@@ -29,6 +27,7 @@ cpu_stack_pointer = 0x00
 cpu_current_ins = None
 cpu_ins_packet = None
 cpu_flow_flag = False
+cpu_await_keypress = False
 
 def initialize_cpu():
     global cpu_prog_counter, cpu_stack_pointer
@@ -39,7 +38,7 @@ def fetch():
     global cpu_ins_packet, cpu_prog_counter, cpu_current_ins
     ins_hi = memory_bus.memory_read(cpu_prog_counter)
     ins_lo = memory_bus.memory_read(cpu_prog_counter + 1)
-    res = ins_hi + ins_lo
+    res = (ins_hi << 8) | ins_lo
     cpu_ins_packet = instruction_set.get_instruction(res)
     cpu_current_ins = cpu_ins_packet[2]
 

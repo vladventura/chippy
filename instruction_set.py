@@ -2,6 +2,8 @@ import helpers
 import gpu
 import cpu
 import memory_bus
+import keypad_input
+import timer
 
 instructions_param = 0x000
 
@@ -95,7 +97,7 @@ def _8xy4():
     global instructions_param
     vx = (instructions_param & 0xf00) >> 8
     vy = (instructions_param & 0x0f0) >> 4
-    has_carry = (vx & 0x1) & (vy & 0x1) == 0x1
+    has_carry = vx + vy > 0xff 
     cpu.cpu_data_registers[0x0F] = 1 if has_carry else 0
 
     cpu.cpu_data_registers[vx] += cpu.cpu_data_registers[vy]
@@ -155,6 +157,28 @@ def _dxyn():
     n = instructions_param & 0x00f
     gpu.draw(cpu.cpu_data_registers[x], cpu.cpu_data_registers[y], n)
 
+def _fx07():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    cpu.cpu_data_registers[vx] = timer.timer_delay
+
+def _fx0a():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    keypad_input.keypad_input_target_vx = vx
+    cpu.cpu_await_keypress = True
+
+def _fx15():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    timer.timer_delay = cpu.cpu_data_registers[vx]
+
+def _fx29():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    cpu.cpu_I_register = cpu.cpu_data_registers[vx] * 5 # ?
+    cpu.cpu_I_register &= 0xffff
+
 def _fx33():
     global instructions_param
     vx = (instructions_param & 0xf00) >> 8
@@ -184,7 +208,7 @@ def _fx65():
 (Description, Opcode, Callback)
 """
 instructions = {
-    0x0000: ('Execute Subroutine',                              '0NNN', None),
+    0x0000: ('Execute Subroutine',                              '0NNN', _1nnn),
     0x00E0: ('Clear Screen',                                    '00E0', _00e0),
     0x00EE: ('Return from Subroutine',                          '00EE', _00ee),
     0x1000: ('Jump to Address',                                 '1NNN', _1nnn),
@@ -210,20 +234,20 @@ instructions = {
     0xD000: ('Draw N-height at VXVY',                           'DXYN', _dxyn),
     0xE09E: ('Skip next if hex key value in VX is pressed',     'EX9E', None),
     0xE0A1: ('Skip next if hex key value in VX is not pressed', 'EXA1', None),
-    0xF007: ('Set VX = delay timer',                            'FX07', None),
-    0xF00A: ('Wait for a keypress, store on VX',                'FX08', None),
-    0xF015: ('Set delay timer = VX',                            'FX15', None),
+    0xF007: ('Set VX = delay timer',                            'FX07', _fx07),
+    0xF00A: ('Wait for a keypress, store on VX',                'FX0A', _fx0a),
+    0xF015: ('Set delay timer = VX',                            'FX15', _fx15),
     0xF018: ('Set sound timer = VX',                            'FX18', None),
     0xF01E: ('Set I += VX',                                     'FX1E', None),
-    0xF029: ('Set I to sprite on hex value in VX',              'FX29', None),
+    0xF029: ('Set I to sprite on hex value in VX',              'FX29', _fx29),
     0xF033: ('Set BCD of VX into addresses I, I + 1, I + 2',    'FX33', _fx33),
     0xF055: ('Set [V0, VX] into addresses [I, I + X]',          'FX55', _fx55),
     0xF065: ('Set addresses [I, I + X] into [V0, VX]',          'FX65', _fx65),
 }
 
-def get_instruction(ins: bytes):
+def get_instruction(ins: int):
     global instructions_param
-    opcode = int.from_bytes(ins, byteorder='big')
+    opcode = ins
     instructions_param = 0x000
     if opcode & 0xf000 == 0x0000:
         if opcode == 0x00E0:

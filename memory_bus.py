@@ -1,5 +1,3 @@
-import cpu
-
 memory = [0x00 for _ in range(4096)]
 
 """
@@ -35,7 +33,7 @@ def load_program(prog):
             chunk = binf.read(1)
             if not chunk: break
             if len(chunk) == 1:
-                chunks.append(chunk)
+                chunks.append(int.from_bytes(chunk, byteorder='big'))
     counter = 0x200
     for chunk in chunks:
         memory[counter] = chunk
@@ -46,7 +44,7 @@ def load_fontset():
     for font in range(len(fontset)):
         memory[font] = fontset[font]
 
-def memory_read(addr) -> bytes:
+def memory_read(addr) -> int:
     global memory
     return memory[addr]
 

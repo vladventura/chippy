@@ -1,11 +1,14 @@
 import time
+import keypad_input
 import timer
 import cpu
 import memory_bus
 import gpu
+import pygame
 
 memory_bus.initialize_memory()
-memory_bus.load_program('./test_opcode.ch8')
+# memory_bus.load_program('./test_opcode.ch8')
+memory_bus.load_program('./delay_timer_test.ch8')
 cpu.initialize_cpu()
 gpu.initialize_gpu()
 
@@ -25,14 +28,19 @@ Instruction duration = {timer.timer_instruction_duration}
 )
 
 while True:
-    while (ins_this_step < timer.timer_instructions_per_step):
-        run_result = cpu.run()
-        if not run_result: break
-        ins_this_step += timer.timer_instruction_duration
-        ins_counter += 1
-    # Handle input
+    st = time.perf_counter()
+    keypad_input.capture_input()
+    if not cpu.cpu_await_keypress:
+        while (ins_this_step < int(timer.timer_instructions_per_step)):
+            run_result = cpu.run()
+            if not run_result: break
+            if cpu.cpu_await_keypress: break
+            ins_this_step += 1 # timer.timer_instruction_duration
+            ins_counter += 1
     # Handle audio
-    # Tick timers
-    gpu.screen_heartbeart()
+    timer.tick_delay()
+    pygame.display.flip()
     ins_this_step = 0.0
-    time.sleep(timer.timer_run_speed)
+    el = time.perf_counter() - st
+    if el < timer.timer_run_speed:
+        time.sleep(timer.timer_run_speed - el)
