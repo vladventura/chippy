@@ -35,7 +35,7 @@ while True:
             run_result = cpu.run()
             if not run_result: break
             if cpu.cpu_await_keypress: break
-            ins_this_step += 1 # timer.timer_instruction_duration
+            ins_this_step += 1
             ins_counter += 1
     # Handle audio
     timer.tick_delay()

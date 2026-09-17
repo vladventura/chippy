@@ -1,3 +1,4 @@
+from random import randint
 import helpers
 import gpu
 import cpu
@@ -17,7 +18,6 @@ def _00ee():
 
 def _1nnn():
     global instructions_param
-    # print("InsParam on 1nnn ", hex(instructions_param))
     cpu.cpu_prog_counter = instructions_param
     cpu.cpu_flow_flag = True
 
@@ -150,12 +150,40 @@ def _annn():
     cpu.cpu_I_register = instructions_param
     cpu.cpu_I_register &= 0xffff
 
+def _bnnn():
+    global instructions_param
+    cpu.cpu_prog_counter = (instructions_param + cpu.cpu_prog_counter[0x00]) & 0xfff
+    cpu.cpu_flow_flag = True
+
+def _cxnn():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    nn = instructions_param & 0x0ff
+    cpu.cpu_data_registers[vx] = (randint(1, 255) & nn)
+    cpu.cpu_data_registers[vx] &= 0xff
+
 def _dxyn():
     global instructions_param
     x = (instructions_param & 0xf00) >> 8
     y = (instructions_param & 0x0f0) >> 4
     n = instructions_param & 0x00f
     gpu.draw(cpu.cpu_data_registers[x], cpu.cpu_data_registers[y], n)
+
+def _ex9e():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    key_to_check = cpu.cpu_data_registers[vx]
+    key_pressed = (keypad_input.keypad_input_matrix[key_to_check & 0xff] & 0xf) == 0x01
+    if key_pressed:
+        cpu.cpu_prog_counter += 2
+
+def _exa1():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    key_to_check = cpu.cpu_data_registers[vx]
+    key_not_pressed = (keypad_input.keypad_input_matrix[key_to_check & 0xff] & 0xf) == 0x00
+    if key_not_pressed:
+        cpu.cpu_prog_counter += 2
 
 def _fx07():
     global instructions_param
@@ -172,6 +200,17 @@ def _fx15():
     global instructions_param
     vx = (instructions_param & 0xf00) >> 8
     timer.timer_delay = cpu.cpu_data_registers[vx]
+
+def _fx18():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    timer.timer_sound = cpu.cpu_data_registers[vx]
+
+def _fx1e():
+    global instructions_param
+    vx = (instructions_param & 0xf00) >> 8
+    cpu.cpu_I_register += cpu.cpu_data_registers[vx]
+    cpu.cpu_I_register &= 0xffff
 
 def _fx29():
     global instructions_param
@@ -229,16 +268,16 @@ instructions = {
     0x800E: ('Set VX = VY << 1',                                '8XYE', _8xye),
     0x9000: ('Skip if VX != VY',                                '9XY0', _9xy0),
     0xA000: ('Set I register',                                  'ANNN', _annn),
-    0xB000: ('Jump to NNN + V0',                                'BNNN', None),
-    0xC000: ('Set VX = rand() & NN',                            'CXNN', None),
+    0xB000: ('Jump to NNN + V0',                                'BNNN', _bnnn),
+    0xC000: ('Set VX = rand() & NN',                            'CXNN', _cxnn),
     0xD000: ('Draw N-height at VXVY',                           'DXYN', _dxyn),
-    0xE09E: ('Skip next if hex key value in VX is pressed',     'EX9E', None),
-    0xE0A1: ('Skip next if hex key value in VX is not pressed', 'EXA1', None),
+    0xE09E: ('Skip next if hex key value in VX is pressed',     'EX9E', _ex9e),
+    0xE0A1: ('Skip next if hex key value in VX is not pressed', 'EXA1', _exa1),
     0xF007: ('Set VX = delay timer',                            'FX07', _fx07),
     0xF00A: ('Wait for a keypress, store on VX',                'FX0A', _fx0a),
     0xF015: ('Set delay timer = VX',                            'FX15', _fx15),
-    0xF018: ('Set sound timer = VX',                            'FX18', None),
-    0xF01E: ('Set I += VX',                                     'FX1E', None),
+    0xF018: ('Set sound timer = VX',                            'FX18', _fx18),
+    0xF01E: ('Set I += VX',                                     'FX1E', _fx1e),
     0xF029: ('Set I to sprite on hex value in VX',              'FX29', _fx29),
     0xF033: ('Set BCD of VX into addresses I, I + 1, I + 2',    'FX33', _fx33),
     0xF055: ('Set [V0, VX] into addresses [I, I + X]',          'FX55', _fx55),
